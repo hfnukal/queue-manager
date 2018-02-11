@@ -1,0 +1,27 @@
+{
+    "name": "queue/queue-manager",
+    "description": "Manage queues and run jobs",
+    "type": "library",
+    "homepage": "http://honzicek.com/queue",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Shanny",
+            "email": "shanny@honzicek.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Queue\\": "src/Queue/"
+        }
+    },
+    "require": {
+        "php": "^7.0",
+        "doctrine/orm": "^2.6",
+        "dragonmantank/cron-expression": "^2.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^7.0",
+        "phpunit/php-code-coverage": "^6.0"
+    }
+}
