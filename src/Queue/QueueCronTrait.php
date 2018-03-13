@@ -7,7 +7,7 @@
 namespace Queue;
 
 /**
- * Description of QueueCronTrait
+ * Trait adding cron implementation.
  *
  * @author Honza Fnukal <hfnukal@honzicek.com>
  */
@@ -33,6 +33,6 @@ trait QueueCronTrait {
         }
         return $jobs;
     }
-    
+
     abstract public function cronJobList(): Array;
 }

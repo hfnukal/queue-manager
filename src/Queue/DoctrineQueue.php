@@ -24,6 +24,12 @@ class DoctrineQueue implements Queue {
     
     /**
      *
+     * @var mixed Context for jobs
+     */
+    private $context;
+    
+    /**
+     *
      * @var type Doctrine connection
      */
     private $connection;
@@ -47,8 +53,9 @@ class DoctrineQueue implements Queue {
      * @param type $name Queue name
      * @param type $connection Doctrine Connection
      */
-    public function __construct($connection, $name=NULL) {
+    public function __construct($context, $connection, $name=NULL) {
         $this->queuename=$name;
+        $this->context=$context;
         $this->connection=$connection;
     }
     
@@ -90,19 +97,19 @@ class DoctrineQueue implements Queue {
     /**
      * {@inheritdoc}
      */
-    public function addJob(Job $job): Job {
+    public function addJob(Job $job, $state=self::STATE_QUEUE): Job {
         $class=get_class($job);
         $this->connection->insert($this->tablename, array(
             $this::COL_QUEUE => $this->getName(),
             $this::COL_CLASS => $class,
             $this::COL_DATA => $job->getData(),
             $this::COL_DELAY => $job->getDelay(),
-            $this::COL_STATE => $this::STATE_QUEUE
+            $this::COL_STATE => $state
         ));
         $job->setId($this->connection->lastInsertId());
         return $job;
     }
-    
+        
     /**
      * {@inheritdoc}
      */
@@ -154,7 +161,10 @@ class DoctrineQueue implements Queue {
      * @return Array Array of Job instances
      */
     private function getJobWhere($where, $params) {
-        $sql = "SELECT * FROM {$this->tablename} WHERE ".$this::COL_QUEUE." = ? AND ".$where;
+        
+        $sql = "SELECT * FROM {$this->tablename} WHERE ".$this::COL_QUEUE." = ?"
+                . " AND ".$where." ORDER BY ".self::COL_LAST_UPDATE;
+        
         $arr = $this->connection->fetchAssoc($sql, array_merge( array($this->getName()), $params ) );
         if (!is_array($arr)) {
             return NULL;
@@ -215,7 +225,7 @@ class DoctrineQueue implements Queue {
                     array( 
                         $this::COL_STATE=>$this::STATE_HISTORY, 
                         $this::COL_DATA=>$data,
-                        $this::COL_LAST_UPDATE=> $now->format('Y-m-d H:i:s.u') //TODO Update on dn side
+                        $this::COL_LAST_UPDATE=> $now->format('Y-m-d H:i:s.u') //TODO Update on db side
                     ), 
                     array( $this::COL_ID=>$activeJob->getId(), $this::COL_QUEUE=>$this->getName() )
             );
@@ -230,10 +240,13 @@ class DoctrineQueue implements Queue {
      * Get job by ID.
      */
     public function getJob($id):Job {
-        $sql = "SELECT * FROM {$this->tablename} WHERE ".$this::COL_QUEUE." = ? AND ".$this::COL_ID." = ?";
-        $arr = $this->connection->fetchAssoc( $sql, array($this->getName(), $id) );
-        $job = $this->getJobInstance($arr);
-        return $job;
+//        $sql = "SELECT * FROM {$this->tablename} WHERE ".$this::COL_QUEUE." = ? AND ".$this::COL_ID." = ?";
+//        $arr = $this->connection->fetchAssoc( $sql, array($this->getName(), $id) );
+//        $job = $this->getJobInstance($arr);
+        return $this->getJobWhere(
+                $this::COL_ID." = ?", 
+                array($id)
+                );
     }
     
     /**
@@ -241,15 +254,14 @@ class DoctrineQueue implements Queue {
      * @param type $arr
      * @return \Queue\class
      */
-    private function getJobInstance($arr) {
+    public function getJobInstance($arr) {
         $class = $arr[$this::COL_CLASS];
         if(!class_exists($class)) {
             throw new Exception("Class $class is not valid.");
         }
         $job = new $class( 
-                $arr[$this::COL_DATA], 
-                $arr[$this::COL_DELAY], 
-                $arr
+            $arr[$this::COL_DATA] ?? NULL, 
+            $arr
         );
         return $job;
     }
@@ -285,7 +297,12 @@ class DoctrineQueue implements Queue {
      * {@inheritdoc}
      */
     public function trashJob(Job $job) {
-        $this->setJobState($job, $this::STATE_TRASH);
+        if($job->getState()==self::STATE_TRASH) {
+            $this->eraceJob($job);
+            $job->setId("deleted");
+        } else {
+            $this->setJobState($job, $this::STATE_TRASH);
+        }
         return $job;
     }
     
@@ -298,7 +315,8 @@ class DoctrineQueue implements Queue {
      */
     private function getList($state) {
         $statement = $this->connection->executeQuery(
-                "SELECT * FROM {$this->tablename} WHERE ".$this::COL_QUEUE." = ? AND state = ?", 
+                "SELECT * FROM {$this->tablename} WHERE ".$this::COL_QUEUE." = ? AND state = ?"
+                        . " ORDER BY ".self::COL_LAST_UPDATE, 
                 array($this->getName(), $state )
         );
         $res = $statement->fetchAll();
@@ -307,6 +325,7 @@ class DoctrineQueue implements Queue {
             $job = $this->getJobInstance($j);
             array_push($jobs, $job);
         }
+        //return $res;
         return $jobs;
     }
 

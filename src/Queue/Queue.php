@@ -40,7 +40,7 @@ interface Queue {
      * @return Job with updated ID
      */
     public function addJob(Job $newJob);
-    
+        
     /**
      * Adds cron job. Cron job runs on time. Time is defined by $cron pattern.
      * @param type $job

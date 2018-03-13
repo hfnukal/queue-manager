@@ -17,11 +17,13 @@ class QueueManager {
     const DEFAULT_QUEUE='_default';
     private $queueClass="Queue\\DoctrineQueue";
     private $conn;
+    private $context;
     private $queues=array();
     private $runners=array();
     
-    public function __construct(\Doctrine\DBAL\Connection $conn, $queueClass=NULL) {
+    public function __construct(\Doctrine\DBAL\Connection $conn, $context, $queueClass=NULL) {
         $this->conn=$conn;
+        $this->context=$context;
         if ($this->queueClass == NULL) {
             $this->queueClass = $queueClass;
         }
@@ -35,6 +37,13 @@ class QueueManager {
     }
     
     /**
+     * $return Job instance of job from data
+     */
+    public function instanceJob($data) {
+        return $this->getQueue()->getJobInstance($data);
+    }
+        
+    /**
      * Get runner for queue by name
      * @param string $name Name of Queue
      * @return \Queue\QueueRunner
@@ -44,7 +53,7 @@ class QueueManager {
             $name = $this::DEFAULT_QUEUE;
         }
         if(!isset($this->queues[$name])) {
-            $this->runners[$name] = new QueueRunner( $this->getQueue($name) );
+            $this->runners[$name] = new QueueRunner( $this->context, $this->getQueue($name) );
         }
         return $this->runners[$name];
     }
@@ -61,6 +70,7 @@ class QueueManager {
         if(!isset($this->queues[$name])) {
             $class=$this->getQueueClass();
             $this->queues[$name] = new $class(
+                    $this->context,
                     $this->conn, 
                     $name
             );
