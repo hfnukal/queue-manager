@@ -1,5 +1,5 @@
 {
-    "name": "queue/queue-manager",
+    "name": "queues/queue-manager",
     "description": "Manage queues and run jobs",
     "type": "library",
     "homepage": "http://honzicek.com/queue",
