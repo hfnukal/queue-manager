@@ -9,7 +9,7 @@ use \Queue\QueueInterface;
 use Exception;
 
 /**
- * Description of DoctrineQueue
+ * Queue implementation using Doctrine database connection.
  *
  * @author Honza Fnukal <hfnukal@honzicek.com>
  */
