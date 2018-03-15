@@ -12,7 +12,7 @@ Instalation
 Add to project using composer
 
 ```bash
-composer require hfnukal/queue-manager
+composer require queues/queue-manager:1.0.0@dev
 ```
 
 Usage
